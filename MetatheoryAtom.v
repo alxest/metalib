@@ -18,6 +18,7 @@ Require Import CoqListFacts.
 Require Import FSetExtra.
 Require Import FSetWeakNotin.
 Require Import LibTactics.
+Require Import Morphisms.
 
 
 (* ********************************************************************** *)
@@ -38,6 +39,31 @@ Module Type ATOM.
     forall (xs : list atom), {x : atom | ~ List.In x xs}.
 
   Hint Resolve eq_atom_dec.
+
+  (* Parameter ltb : forall x y: atom, bool. *)
+  (* Parameter ltb_trans : forall x y z : atom, ltb x y = true -> ltb y z = true -> ltb x z = true. *)
+  (* Parameter ltb_not_eq : forall x y : atom, ltb x y = true -> ~ eq x y. *)
+
+  (* Definition lt x y := if (ltb x y) then True else False. *)
+  (* Lemma lt_trans : forall x y z : atom, lt x y -> lt y z -> lt x z. *)
+  (* Proof. *)
+  (*   unfold lt. intros. *)
+  (*   destruct (ltb x y) eqn:T1; try intuition. *)
+  (*   destruct (ltb y z) eqn:T2; try intuition. *)
+  (*   erewrite ltb_trans; eauto. *)
+  (* Qed. *)
+  (* Lemma lt_not_eq : forall x y : atom, lt x y -> ~ eq x y. *)
+  (* Proof. *)
+  (*   unfold lt. intros. destruct (ltb x y) eqn:T; try intuition. subst. *)
+  (*   eapply ltb_not_eq; eauto. *)
+  (* Qed. *)
+  (* Parameter compare : forall x y : atom, OrderedType.Compare lt eq x y. *)
+
+  (* I want AtomImpl.lt to be visible outside *)
+  Parameter lt: atom -> atom -> Prop.
+  Parameter lt_strorder : StrictOrder lt.
+  Parameter compare: atom -> atom -> comparison.
+  Parameter compare_spec : forall x y : atom, CompareSpec (eq x y) (lt x y) (lt y x) (compare x y).
 
 End ATOM.
 
@@ -81,7 +107,105 @@ Module AtomImpl : ATOM.
 
   (* end hide *)
 
+  (* Definition lt := Peano.lt. *)
+  (* Lemma lt_trans : forall x y z : atom, lt x y -> lt y z -> lt x z. *)
+  (* Proof. eapply Nat.lt_trans; eauto. Qed. *)
+  (* Lemma lt_not_eq : forall x y : atom, lt x y -> ~ eq x y. *)
+  (* Proof. repeat intro. subst. unfold lt in *. omega. Qed. *)
+  (* Lemma compare : forall x y : atom, OrderedType.Compare lt eq x y. *)
+  (* Proof. *)
+  (*   intro. unfold lt. *)
+  (*   induction x; intros. *)
+  (*   - destruct y; econstructor; omega. *)
+  (*   - destruct y. *)
+  (*     { econstructor; omega. } *)
+  (*     specialize (IHx y). *)
+  (*     inversion IHx; subst; clear IHx; econstructor; omega. *)
+  (* Qed. *)
+
+  (* Definition ltb := Nat.ltb. *)
+  (* Lemma ltb_trans : forall x y z : atom, ltb x y = true -> ltb y z = true -> ltb x z = true. *)
+  (* Proof. *)
+  (*   intros. *)
+  (*   eapply Nat.ltb_lt. *)
+  (*   eapply Nat.ltb_lt in H. *)
+  (*   eapply Nat.ltb_lt in H0. *)
+  (*   etransitivity; eauto. *)
+  (* Qed. *)
+  (* Lemma ltb_not_eq : forall x y : atom, ltb x y = true -> ~ eq x y. *)
+  (* Proof. *)
+  (*   repeat intro. subst. *)
+  (*   erewrite Nat.ltb_irrefl in H; eauto. inversion H. *)
+  (* Qed. *)
+
+  (* Definition lt x y := if (ltb x y) then True else False. *)
+  (* Lemma lt_trans : forall x y z : atom, lt x y -> lt y z -> lt x z. *)
+  (* Proof. *)
+  (*   unfold lt. intros. *)
+  (*   destruct (ltb x y) eqn:T1; try intuition. *)
+  (*   destruct (ltb y z) eqn:T2; try intuition. *)
+  (*   erewrite ltb_trans; eauto. *)
+  (* Qed. *)
+  (* Lemma lt_not_eq : forall x y : atom, lt x y -> ~ eq x y. *)
+  (* Proof. *)
+  (*   unfold lt. intros. destruct (ltb x y) eqn:T; try intuition. subst. *)
+  (*   eapply ltb_not_eq; eauto. *)
+  (* Qed. *)
+
+  (* Lemma compare : forall x y : atom, OrderedType.Compare lt eq x y. *)
+  (* Proof. *)
+  (*   intros. *)
+  (*   destruct (Nat.compare x y) eqn:T. *)
+  (*   { econstructor 2. eapply nat_compare_eq; eauto. } *)
+  (*   { econstructor 1. unfold lt. *)
+  (*     unfold ltb. *)
+  (*     destruct (x <? y) eqn:T2; eauto. *)
+  (*     eapply Nat.ltb_nlt in T2; eauto. *)
+  (*     eapply nat_compare_Lt_lt in T; eauto. *)
+  (*   } *)
+  (*   { econstructor 3. unfold lt. *)
+  (*     unfold ltb. *)
+  (*     destruct (y <? x) eqn:T2; eauto. *)
+  (*     eapply Nat.ltb_nlt in T2; eauto. *)
+  (*     eapply nat_compare_Gt_gt in T; eauto. *)
+  (*   } *)
+  (* Qed. *)
+
+  (* Definition t := atom. *)
+  (* Definition eq := @eq atom. *)
+  (* Lemma eq_equiv : Equivalence eq. *)
+  (* Proof. eapply eq_equivalence; eauto. Qed. *)
+
+  Definition lt: atom -> atom -> Prop := Nat.lt.
+
+  Lemma lt_strorder : StrictOrder lt.
+  Proof.
+    unfold lt.
+    eapply Nat.lt_strorder; eauto.
+  Qed.
+
+  (* Lemma lt_compat : Proper (eq ==> eq ==> iff) lt. *)
+  (* Proof. *)
+  (*   repeat intro. *)
+  (*   unfold eq in *. subst. *)
+  (*   split; auto. *)
+  (* Qed. *)
+
+  Definition compare: atom -> atom -> comparison := Nat.compare.
+    
+  Lemma compare_spec : forall x y : atom, CompareSpec (eq x y) (lt x y) (lt y x) (compare x y).
+  Proof.
+    unfold compare, lt.
+    repeat intro. eapply Nat.compare_spec; eauto.
+  Qed.
+
+  Definition eq_dec := eq_atom_dec.
+
 End AtomImpl.
+
+(* Module is_ordered_check : Orders.OrderedType := AtomImpl. *)
+(* Reset is_ordered_check. *)
+
 
 (** We make [atom], [eq_atom_dec], and [atom_fresh_for_list] available
     without qualification. *)
